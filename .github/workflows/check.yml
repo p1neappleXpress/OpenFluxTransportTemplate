@@ -1,0 +1,24 @@
+# Every push and PR: build the package with a throwaway key, so a manifest/script
+# mismatch (name, version) or a script that does not even load fails here and
+# not on a user's device.
+name: Check
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: true }
+      - uses: actions/setup-go@v5
+        with: { go-version: stable }
+      - name: Build scriptsign
+        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'main' }}
+      - name: Pack with a throwaway key
+        run: |
+          scriptsign genkey /tmp/t.priv /tmp/t.pub >/dev/null
+          scriptsign pack /tmp/t.priv manifest.json src/main.js /tmp/check.flux
+          scriptsign verify /tmp/t.pub /tmp/check.flux

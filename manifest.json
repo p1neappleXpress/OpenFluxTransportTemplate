@@ -1,0 +1,9 @@
+{
+  "id": "my-transport",
+  "name": "my-transport",
+  "version": "0.1.0",
+  "author": "Your Name",
+  "description": "One line: which service carries the traffic.",
+  "wire": 1,
+  "api": 1
+}

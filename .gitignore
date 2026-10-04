@@ -1,0 +1,4 @@
+*.key
+*.priv
+dist/
+.DS_Store

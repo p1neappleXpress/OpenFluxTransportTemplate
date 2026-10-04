@@ -1,0 +1,76 @@
+# Push a tag to publish:   v1.4.0       -> channel "stable"
+#                          v1.5.0-beta.1 -> channel "nightly" (GitHub pre-release)
+#
+# The signed <id>-<version>.flux becomes a release asset; update.json (the file
+# the apps poll) lives on the `updates` branch, one entry per channel, so a new
+# stable release never drops the nightly entry and vice versa.
+#
+# One-time setup: add your private key (the one-line hex file from
+# `scriptsign genkey`) as the repository secret SIGNING_KEY.
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { submodules: true }
+      - uses: actions/setup-go@v5
+        with: { go-version: stable }
+      - name: Build scriptsign
+        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'main' }}
+
+      - name: Version from the tag must equal manifest.json
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          have="$(jq -r .version manifest.json)"
+          [ "$tag" = "$have" ] || { echo "tag $tag != manifest.json version $have"; exit 1; }
+          case "$tag" in *-*) echo "CHANNEL=nightly" >> "$GITHUB_ENV"; echo "PRERELEASE=--prerelease" >> "$GITHUB_ENV";;
+                         *)   echo "CHANNEL=stable"  >> "$GITHUB_ENV"; echo "PRERELEASE=" >> "$GITHUB_ENV";; esac
+          echo "VERSION=$tag" >> "$GITHUB_ENV"
+          echo "ID=$(jq -r .id manifest.json)" >> "$GITHUB_ENV"
+
+      - name: Point the manifest at this repository's update.json (signed with it)
+        run: |
+          url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/updates/update.json"
+          jq --arg u "$url" '.update = (.update // [$u])' manifest.json > /tmp/manifest.json
+
+      - name: Pack and sign
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        run: |
+          [ -n "$SIGNING_KEY" ] || { echo "secret SIGNING_KEY is not set"; exit 1; }
+          umask 077; printf '%s\n' "$SIGNING_KEY" > /tmp/signing.key
+          mkdir -p dist
+          icon=""; [ -f icon.png ] && icon="icon.png"
+          scriptsign pack /tmp/signing.key /tmp/manifest.json src/main.js "dist/${ID}-${VERSION}.flux" $icon
+          rm -f /tmp/signing.key
+
+      - name: Publish the release
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/${ID}-${VERSION}.flux" $PRERELEASE \
+            --title "${ID} ${VERSION}" --generate-notes
+
+      - name: Update update.json on the `updates` branch
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          notes="$(gh release view "$GITHUB_REF_NAME" --json body -q .body | head -c 2000)"
+          repo="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$repo" updates >/dev/null 2>&1; then
+            git clone -q --branch updates --depth 1 "$repo" /tmp/updates
+          else
+            git init -q -b updates /tmp/updates && git -C /tmp/updates remote add origin "$repo"
+          fi
+          scriptsign index -channel="$CHANNEL" \
+            -url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${ID}-${VERSION}.flux" \
+            -notes="$notes" /tmp/updates/update.json "dist/${ID}-${VERSION}.flux"
+          cd /tmp/updates
+          git config user.name "github-actions"; git config user.email "actions@users.noreply.github.com"
+          git add update.json && git commit -qm "${ID} ${VERSION} on ${CHANNEL}" && git push -q origin updates
