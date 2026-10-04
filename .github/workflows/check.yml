@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version: stable }
       - name: Build scriptsign
-        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'main' }}
+        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'nightly' }}
       - name: Pack with a throwaway key
         run: |
           scriptsign genkey /tmp/t.priv /tmp/t.pub >/dev/null

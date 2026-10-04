@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version: stable }
       - name: Build scriptsign
-        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'main' }}
+        run: go install github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@${{ vars.SCRIPTSIGN_REF || 'nightly' }}
 
       - name: Version from the tag must equal manifest.json
         run: |

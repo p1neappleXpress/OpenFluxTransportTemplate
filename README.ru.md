@@ -21,7 +21,7 @@ git clone --recurse-submodules <ваш форк>    # sdk/ большой: до�
 
 1. Сгенерируйте ключ автора. **Не коммитьте его.**
    ```bash
-   go run github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@main genkey author.priv author.pub
+   go run github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@nightly genkey author.priv author.pub
    ```
 2. Содержимое `author.priv` - в секрет репозитория **`SIGNING_KEY`** (Settings → Secrets and variables → Actions).
 3. Опубликуйте отпечаток `author.pub` (SHA-256; приложение показывает его при первой установке), например здесь, в README.
@@ -47,3 +47,6 @@ git tag v0.2.0 && git push --tags
   (официальные транспорты обновятся сами, остальные - одним нажатием). Если не понимают - поднимите `wire`: приложение задержит обновление до подтверждения, ведь ноду тоже надо обновить.
 - **`api`** - поколение host API, под которое вы писали; оставьте как в шаблоне.
 - Смена ключа подписи - это не обновление: пользователям придётся импортировать и доверить новый ключ заново.
+
+> Пока новые команды `scriptsign` (проверки в `pack`, `index`) не попали в `main` OpenFlux, CI собирает его из ветки `nightly`.
+> Переменная репозитория `SCRIPTSIGN_REF` задаёт другую ветку или тег.

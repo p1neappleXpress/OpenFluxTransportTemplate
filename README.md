@@ -24,7 +24,7 @@ git clone --recurse-submodules <your fork>     # sdk/ is big: add --depth 1 --sh
 
 1. Generate your author key. **Never commit it.**
    ```bash
-   go run github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@main genkey author.priv author.pub
+   go run github.com/p1neappleXpress/OpenFlux/transport/script/cmd/scriptsign@nightly genkey author.priv author.pub
    ```
 2. Add the contents of `author.priv` as the repository secret **`SIGNING_KEY`**
    (Settings → Secrets and variables → Actions).
@@ -60,3 +60,6 @@ git tag v0.2.0 && git push --tags
   confirms, because the node has to be updated too.
 - **`api`** is the host-API generation you wrote against; leave it as the template has it.
 - Changing the signing key is not an update: users have to import and trust the new key again.
+
+> Until the new `scriptsign` commands (`pack` lint, `index`) reach OpenFlux's `main`, CI builds it from
+> the `nightly` branch. Set the repository variable `SCRIPTSIGN_REF` to pin another branch or tag.
